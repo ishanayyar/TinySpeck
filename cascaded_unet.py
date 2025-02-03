@@ -4,6 +4,18 @@ Created on Fri May 20 14:15:05 2022
 @author: mkazemzadeh
 """
 
+# discussed removing layers  to reduce model size // or like maybe we can try to reduce the number of filters in each layer??
+# literally just reduce epochs to 50?
+# can we reduce network depth?
+
+# should we preprocess to make inputs smaller???
+# DISCRETIZATION: lower precison (8bit instead of 32)
+
+#### tinyml?? or mobilenet or efficientnet
+# could remove less important weights from model
+
+
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +24,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 # okay so here we're importing modules required for U-Net model - which is 1D in this case
-import tensorflow as tf 
+import tensorflow as tf  
 import tensorflow.keras as keras # type: ignore
 from tensorflow.keras.layers import Input, Conv1D, MaxPooling1D, Activation, ReLU, Dense, Reshape, Multiply, Normalization
 from tensorflow.keras.layers import BatchNormalization, Conv1DTranspose, Concatenate,Flatten
@@ -22,6 +34,9 @@ from tensorflow.keras import regularizers
 
 # hmmmmmm I suppose the raspberry Pi will require cleaned data.... do we need to add a processing step here?
 # or can we asume data will be in a simpler format?
+
+
+# resolution scaling!  And same with output.
 
 X=np.load('sigd.npy')[:120000]  # input signals from generated spectra
 y1=np.load('sigc.npy')[:120000] # first target
@@ -35,8 +50,9 @@ y=y.reshape(y.shape[0],y.shape[1],1)
 
 # data split into test & training  ----- if using raw data here, might need to do a clean first??? Not artificial spectra?
 # or is the denoising from 1D U-Net sufficient?
-X_train,X_val,y1_train,y1_val,y_train,y_val=train_test_split(X,y1,y) 
-
+## X_train,X_val,y1_train,y1_val,y_train,y_val=train_test_split(X,y1,y) 
+X_train, X_val, y1_train, y1_val, y_train, y_val = train_test_split(X, y1, y, test_size=0.2, random_state=7)
+ 
 # building U-Net
 # so this function is applying two 1D convolutional layers with batch normalization and ReLU activation
 
@@ -44,13 +60,13 @@ X_train,X_val,y1_train,y1_val,y_train,y_val=train_test_split(X,y1,y)
 # using this to detect local features in Raman data - like peaks, trends etc....
 
 
-def convolution_operation(entered_input, filters=64):
+def convolution_operation(entered_input, filters=64): ## reduce filters here?
     # Taking first input and implementing the first conv block
     conv1 = Conv1D(filters, kernel_size = (3), padding = "same", kernel_regularizer=regularizers.L2(1e-4))(entered_input)
     batch_norm1 = BatchNormalization()(conv1)
     act1 = ReLU()(batch_norm1) # adds non-linearity
     
-    # act1 = attention(act1)  ------ why do you remove the attention blocks???
+    # act1 = attention(act1)  ------ why do you remove the attention blocks??? Can test this in future
     
     # Taking first input and implementing the second conv block
     conv2 = Conv1D(filters, kernel_size = (3), padding = "same", kernel_regularizer=regularizers.L2(1e-4))(act1)
@@ -170,3 +186,26 @@ his=model.fit(X_train, [y1_train,y_train], validation_data=(X_val, [y1_val,y_val
                             epochs=200)
 
 
+# number opt
+# modern spect -- ccd pixel 2048 point --> older ones are 1024 pixels
+
+# that's usually higher than the actual spectra resolution --> consider effects on Raman shift
+# but tools limit to 10 Raman shift
+
+# we should reduce number of points to like 500ish becuase in theory we aren't all the points anyway 512
+# power of 2 effect, so can save heaps of time!
+
+# need to research first!
+
+
+# consider attention blocks later - can reduce number of parameters - block attention
+# usually massive downsampling so make sure there is sufficient averaging
+
+# number of current params and how much can we reduce it by???
+
+
+# future: application for raspberry Pi (TinyML) --> even deepseek using int8 --> consider float point 32 and fp16
+# we want to discretize to int8
+
+
+# raspberry pi 5 and raspberry pi 0 --> compare to PC
