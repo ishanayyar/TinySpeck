@@ -157,6 +157,7 @@ for ii in range(spectralnumber):
         print(str(ii/spectralnumber*100)[:4]+"% finished")
         plt.plot(sigd[-1])
         plt.show()
+        plt.savefig("spectra"+str(ii)+".png")
         
 
 
