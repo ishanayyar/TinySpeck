@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 
 # okay so here we're importing modules required for U-Net model - which is 1D in this case
 import tensorflow as tf 
-import tensorflow.keras as keras
+import tensorflow.keras as keras # type: ignore
 from tensorflow.keras.layers import Input, Conv1D, MaxPooling1D, Activation, ReLU, Dense, Reshape, Multiply, Normalization
 from tensorflow.keras.layers import BatchNormalization, Conv1DTranspose, Concatenate,Flatten
 from tensorflow.keras.models import Model, Sequential
