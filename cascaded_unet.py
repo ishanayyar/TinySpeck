@@ -59,7 +59,6 @@ X_train, X_val, y1_train, y1_val, y_train, y_val = train_test_split(X, y1, y, te
 # Note to self: 1D convolutional layer applies set of kernels (learnable filters) to input tensor to extract local patterns
 # using this to detect local features in Raman data - like peaks, trends etc....
 
-
 def convolution_operation(entered_input, filters=64): ## reduce filters here?
     # Taking first input and implementing the first conv block
     conv1 = Conv1D(filters, kernel_size = (3), padding = "same", kernel_regularizer=regularizers.L2(1e-4))(entered_input)
