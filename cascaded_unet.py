@@ -4,6 +4,7 @@ Created on Fri May 20 14:15:05 2022
 @author: mkazemzadeh
 """
 
+
 # discussed removing layers  to reduce model size // or like maybe we can try to reduce the number of filters in each layer??
 # literally just reduce epochs to 50?
 # can we reduce network depth?
