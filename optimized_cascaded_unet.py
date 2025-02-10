@@ -68,15 +68,15 @@ y_downsampled = downsample_subsampling(y, factor=original_size // target_size)
 # X_downsampled = downsample_averaging(X, window_size=original_size // target_size)
 # X_downsampled = downsample_pca(X, n_components=512)
 
-# Save downsampled data
-np.save('sigd_512.npy', X_downsampled)
+# TEST with saved downsampled data
+np.save('sigd_can 512.npy', X_downsampled)
 np.save('sigc_512.npy', y1_downsampled)
 np.save('sigi_512.npy', y_downsampled)
 
 print("Downsampling complete. New shape:", X_downsampled.shape)
 
 
-
+########## PCA seems like the best option
 
 
 
