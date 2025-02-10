@@ -5,23 +5,10 @@ Created on Fri May 20 14:15:05 2022
 
 Revised Feb 2025
 """
-
-
-# discussed removing layers  to reduce model size // or like maybe we can try to reduce the number of filters in each layer??
-# literally just reduce epochs to 50?
-# can we reduce network depth?
-
-# should we preprocess to make inputs smaller???
-# DISCRETIZATION: lower precison (8bit instead of 32)
-
-#### tinyml?? or mobilenet or efficientnet
-# could remove less important weights from model
-
-
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 
 ### seems like sklearn is now deprecated; use scikit-learn
 from sklearn.model_selection import train_test_split
@@ -35,10 +22,6 @@ from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
 
-# hmmmmmm I suppose the raspberry Pi will require cleaned data.... do we need to add a processing step here?
-# or can we asume data will be in a simpler format?
-
-
 # resolution scaling!  And same with output.
 
 X=np.load('sigd.npy')[:120000]  # input signals from generated spectra
@@ -46,6 +29,56 @@ y1=np.load('sigc.npy')[:120000] # first target
 y=np.load('sigi.npy')[:120000] # second target
 
 print('finito')
+
+# need to ask Mohammad which one is best to use in terms of downsampling
+def downsample_subsampling(data, factor=2):
+    """Downsample by selecting every nth point (subsampling)."""
+    return data[:, ::factor]
+
+def downsample_averaging(data, window_size=2):
+    """Downsample by averaging adjacent points."""
+    kernel = np.ones((1, window_size)) / window_size
+    smoothed = np.apply_along_axis(lambda m: np.convolve(m, kernel.ravel(), mode='valid'), axis=1, arr=data)
+    return smoothed[:, ::window_size]  # Take every nth point after smoothing
+
+def downsample_pca(data, n_components=512):
+    """Downsample using PCA to extract principal components."""
+    pca = PCA(n_components=n_components)
+    return pca.fit_transform(data)
+
+# Load original data
+X = np.load('sigd.npy')[:120000]  # input signals
+
+y1 = np.load('sigc.npy')[:120000] # first target
+y = np.load('sigi.npy')[:120000] # second target
+
+# Ensure original input size is at least 1024 or 2048
+original_size = X.shape[1]
+if original_size not in [1024, 2048]:
+    raise ValueError("Unexpected input size. Expected 1024 or 2048.")
+
+target_size = 512  # Downsample to 512 points
+
+# Apply downsampling
+X_downsampled = downsample_subsampling(X, factor=original_size // target_size)
+y1_downsampled = downsample_subsampling(y1, factor=original_size // target_size)
+y_downsampled = downsample_subsampling(y, factor=original_size // target_size)
+
+# Alternative methods
+# X_downsampled = downsample_averaging(X, window_size=original_size // target_size)
+# X_downsampled = downsample_pca(X, n_components=512)
+
+# Save downsampled data
+np.save('sigd_512.npy', X_downsampled)
+np.save('sigc_512.npy', y1_downsampled)
+np.save('sigi_512.npy', y_downsampled)
+
+print("Downsampling complete. New shape:", X_downsampled.shape)
+
+
+
+
+
 
 X=X.reshape(X.shape[0],X.shape[1],1) # reshaped to have single-channel dimension
 y1=y1.reshape(y1.shape[0],y1.shape[1],1)
@@ -94,9 +127,11 @@ def decoder(entered_input, skip, filters=64):
     out = convolution_operation(Connect_Skip, filters)
     return out
 
-Sz1=16
-Sz2=16
-Sz3=16
+
+'''I'm reducing filters in each layer to 8 (from 16)'''
+Sz1=8
+Sz2=8
+Sz3=8
 
 
 # first stage processes input to generate output (out0) --an intermediate output
@@ -188,26 +223,4 @@ his=model.fit(X_train, [y1_train,y_train], validation_data=(X_val, [y1_val,y_val
                             epochs=50)
 
 
-# number opt
-# modern spect -- ccd pixel 2048 point --> older ones are 1024 pixels
-
-# that's usually higher than the actual spectra resolution --> consider effects on Raman shift
-# but tools limit to 10 Raman shift
-
-# we should reduce number of points to like 500ish becuase in theory we aren't all the points anyway 512
-# power of 2 effect, so can save heaps of time!
-
-# need to research first!
-
-
-# consider attention blocks later - can reduce number of parameters - block attention
-# usually massive downsampling so make sure there is sufficient averaging
-
-# number of current params and how much can we reduce it by???
-
-
-# future: application for raspberry Pi (TinyML) --> even deepseek using int8 --> consider float point 32 and fp16
-# we want to discretize to int8
-
-
-# raspberry pi 5 and raspberry pi 0 --> compare to PC
+''' reduced epochs to 50 from 200'''

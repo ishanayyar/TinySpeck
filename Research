@@ -1,0 +1,51 @@
+Main areas to look at to optimize - since we have a resource-constrained environment:
+
+####################
+Optimize input/output resolution as we discussed
+####################
+- we can downsample inputs 
+- Raman has lots of redundant data --> downsampling to 512 points instead of 1024+ --> retain sufficient detail; reduce computational load
+- effect on Raman Shift --> downsampling shouldn't affect meaningful spectral peaks
+
+Scaling output res: does current output res match the necessary precision??
+
+
+https://www.edinst.com/resource/spectral-resolution-in-raman-spectroscopy/
+https://www.nature.com/articles/s41377-024-01394-5
+https://static.horiba.com/fileadmin/Horiba/Products/Scientific/Molecular_and_Microanalysis/Raman_General/Spectral_Resolution_Tech_Note_RA-TN14.pdf
+--> very interesting to see CCD v spectral res
+
+https://www.photonics.com/Articles/Selecting_CCDs_for_Raman_Spectroscopy/a45915
+
+--> specifically mentions handheld Raman devices
+
+
+
+###################
+Fewer layers/filters
+###################
+- might need to reduce filters systematically (eg. halve filter count per layer) + check for performance loss
+- fewer epochs: training for only 50 epochs -> sped up training but maybe affecting model convergence. EARLY STOPPING?
+- shallower network: can network perform with fewer encoder-decoder blocks????
+- might need to prune away some weights
+
+###################
+Data cleaning
+###################
+- noise handling: additional preprocessing?
+- raw data compatibility: running on Raspberry Pi; could preprocess data separately to avoid runtime processing overhead?
+
+####################
+Quantization /Discretization
+####################
+- lower precision -from 32-bit fp to 8-bit int (post-training quantization) to reduce model size
+- TensorFlow Lite(TFLite): can we test TFLite version w/quantization -int8?
+
+####################
+Deployment
+####################
+
+- benchmark performance on Raspberry Pi Zero and Pi 5 --> very different performance levels
+- need model to fit within available RAM w/o excessive swapping
+- depthwise separable convolutions? More efficient?
+
