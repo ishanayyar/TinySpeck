@@ -1,5 +1,39 @@
 Main areas to look at to optimize - since we have a resource-constrained environment:
 
+
+Minutes from 11th Feb
+
+Hyperparameter
+- figure with 36 million parameters
+- figure with muchhhh fewer parameters —> similar output
+- graphics card -> what model 4060?
+
+— on windows, save as .keras
+
+- for handheld device, maybe 256 is enough
+- not changing data, just filter
+
+- compress data?
+- starting filter? Can we train the data on a few models to decide how many filters we need?
+- what would be the best at the start? Train on 8, 32, 64, 128
+—> figure of merit
+
+- still 200 epochs; callback —> save the best model
+- when after 10 epochs, no improvement  —>> another callback
+
+- change number of encoder-decoder blocks
+12 networks —> 4 diff number of encoder-decoder blocks, and diff filters
+- save learning rate/training curve and validation loss —> save best model
+
+
+- max pooling: increase number of channels by factor of 2; decrease feature map size by factor of 4: consider stride of 2, 3, and 4 
+- reduce tensor 
+
+
+SO TRAINING 36 models in total
+
+
+
 ####################
 Optimize input/output resolution as we discussed
 ####################
@@ -38,6 +72,8 @@ Data cleaning
 ####################
 Quantization /Discretization
 ####################
+Raspberry Pi --> fine to handle int8, so no need to discretize --> test w/ TFLite --> not needed for training, but good for inference
+ARM Chips (cheaper than raspberry pi)
 - lower precision -from 32-bit fp to 8-bit int (post-training quantization) to reduce model size
 - TensorFlow Lite(TFLite): can we test TFLite version w/quantization -int8?
 
