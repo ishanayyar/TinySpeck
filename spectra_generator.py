@@ -156,9 +156,9 @@ for ii in range(spectralnumber):
     if ii%5000==0:
         print(str(ii/spectralnumber*100)[:4]+"% finished")
         plt.plot(sigd[-1])
-        plt.show()
-        plt.savefig("spectra"+str(ii)+".png")
         
+        plt.savefig("spectra"+str(ii)+".png")
+        plt.show()
 
 
 sigi=np.array(sigi)  # pure signal --> ideal; no noise
