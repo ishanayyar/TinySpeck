@@ -160,7 +160,6 @@ for ii in range(spectralnumber):
         plt.savefig("spectra"+str(ii)+".png")
         plt.show()
 
-
 sigi=np.array(sigi)  # pure signal --> ideal; no noise
 sigd=np.array(sigd)  # final spectrum --> signal, noise, and baseline, and cosmic rays
 sigc=np.array(sigc)  # spectrum w/o baseline
