@@ -37,18 +37,18 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
         x = tf.keras.layers.MaxPooling1D(pool_size=(2), strides=max_pool_stride)(x)
 
     # Bottleneck
-    x = tf.keras.layers.Conv1D(1024, (3, 3), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(1024, (3, 3), activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(1024, (3), activation='relu', padding='same')(x)
+    x = tf.keras.layers.Conv1D(1024, (3), activation='relu', padding='same')(x)
 
     #decoder
     for i in range(num_blocks):
-        x = tf.keras.layers.UpSampling1D(size=(2, 2))(x)
+        x = tf.keras.layers.UpSampling1D(size=(2))(x)
         x = tf.keras.layers.Concatenate()([x, skips[-(i + 1)]]) 
-        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3, 3), activation='relu', padding='same')(x)
-        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3, 3), activation='relu', padding='same')(x)
+        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3), activation='relu', padding='same')(x)
+        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3), activation='relu', padding='same')(x)
 
     #output layer
-    outputs = tf.keras.layers.Conv1D(1, (1, 1))(x)
+    outputs = tf.keras.layers.Conv1D(1, (1))(x)
 
     model = tf.keras.models.Model(inputs, outputs)
     return model
@@ -63,8 +63,9 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
                   max_pool_stride=max_pool_stride)
     
     optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)  # could adjust learning rate??
-    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=optimizer, loss='logcosh', metrics=['mae'])
 
+    # callback to save model with best mae
     # model training
     history = model.fit(X_train, Y_train, 
                         validation_data=(X_val, Y_val), 
