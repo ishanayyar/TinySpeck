@@ -18,7 +18,8 @@ X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.2, random_st
 param_grid = {
     'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks
     'max_pool_stride': [2, 3, 4],  # Max pooling strides
-    'batch_size': [8, 32, 64, 128]  # Batch sizes
+    'batch_size': [8, 32, 64, 128],  # Batch sizes
+    'learning_rate': [1e-4, 1e-3, 1e-2]  # Learning rates
 }
 
 def U_Net(input_shape, num_blocks, max_pool_stride):
@@ -29,7 +30,7 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
     skips = []
     for i in range(num_blocks):
 
-        # Use batch normalization here AND THEN activaatoin --> else output becomes less than 0
+        # Use batch normalization here AND THEN activation --> else output becomes less than 0
         # Dead neurons
         x = tf.keras.layers.Conv1D(64 * (2 ** i), (3), activation='relu', padding='same')(x)
         x = tf.keras.layers.Conv1D(64 * (2 ** i), (3), activation='relu', padding='same')(x)
