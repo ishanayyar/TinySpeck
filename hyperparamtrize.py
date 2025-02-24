@@ -29,7 +29,7 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
     skips = []
     for i in range(num_blocks):
 
-        # Use batch normalization here --> else output becomes less than 0
+        # Use batch normalization here AND THEN activaatoin --> else output becomes less than 0
         # Dead neurons
         x = tf.keras.layers.Conv1D(64 * (2 ** i), (3), activation='relu', padding='same')(x)
         x = tf.keras.layers.Conv1D(64 * (2 ** i), (3), activation='relu', padding='same')(x)
@@ -44,11 +44,11 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
     for i in range(num_blocks):
         x = tf.keras.layers.UpSampling1D(size=(2, 2))(x)
         x = tf.keras.layers.Concatenate()([x, skips[-(i + 1)]]) 
-        x = tf.keras.layers.Conv2D(64 * (2 ** (num_blocks - i - 1)), (3, 3), activation='relu', padding='same')(x)
-        x = tf.keras.layers.Conv2D(64 * (2 ** (num_blocks - i - 1)), (3, 3), activation='relu', padding='same')(x)
+        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3, 3), activation='relu', padding='same')(x)
+        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3, 3), activation='relu', padding='same')(x)
 
     #output layer
-    outputs = tf.keras.layers.Conv2D(1, (1, 1), activation='sigmoid')(x)
+    outputs = tf.keras.layers.Conv1D(1, (1, 1))(x)
 
     model = tf.keras.models.Model(inputs, outputs)
     return model
