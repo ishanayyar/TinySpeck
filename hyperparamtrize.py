@@ -32,29 +32,48 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
 
         # Use batch normalization here AND THEN activation --> else output becomes less than 0
         # Dead neurons
-        x = tf.keras.layers.Conv1D(64 * (2 ** i), (3), activation='relu', padding='same')(x)
-        x = tf.keras.layers.Conv1D(64 * (2 ** i), (3), activation='relu', padding='same')(x)
-        skips.append(x)  #Save the skip connection
-        x = tf.keras.layers.MaxPooling1D(pool_size=(2), strides=max_pool_stride)(x)
+        x = tf.keras.layers.Conv1D(64 * (2 ** i), 3, padding='same')(x)
+        x = tf.keras.layers.BatchNormalization()(x)  # Add batch norm
+        x = tf.keras.layers.Activation('relu')(x)
 
-    # Bottleneck
-    x = tf.keras.layers.Conv1D(1024, (3), activation='relu', padding='same')(x)
-    x = tf.keras.layers.Conv1D(1024, (3), activation='relu', padding='same')(x)
+        x = tf.keras.layers.Conv1D(64 * (2 ** i), 3, padding='same')(x)
+        x = tf.keras.layers.BatchNormalization()(x)  # Add batch norm
+        x = tf.keras.layers.Activation('relu')(x)
+        
+        skips.append(x)  #Save the skip connection
+        x = tf.keras.layers.MaxPooling1D(pool_size=2, strides=max_pool_stride)(x)
+
+    
+    x = tf.keras.layers.Conv1D(1024, 3, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Activation('relu')(x)
+
+    x = tf.keras.layers.Conv1D(1024, 3, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Activation('relu')(x)
 
     #decoder
     for i in range(num_blocks):
-        x = tf.keras.layers.UpSampling1D(size=(2))(x)
+        x = tf.keras.layers.UpSampling1D(size=2)(x)
         x = tf.keras.layers.Concatenate()([x, skips[-(i + 1)]]) 
-        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3), activation='relu', padding='same')(x)
-        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), (3), activation='relu', padding='same')(x)
+        
+        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), 3, padding='same')(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.Activation('relu')(x)
+
+        x = tf.keras.layers.Conv1D(64 * (2 ** (num_blocks - i - 1)), 3, padding='same')(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.Activation('relu')(x)
 
     #output layer
-    outputs = tf.keras.layers.Conv1D(1, (1))(x)
+    outputs = tf.keras.layers.Conv1D(1,1)(x)
 
     model = tf.keras.models.Model(inputs, outputs)
     return model
 
 for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'], 
+                                                       # Bottleneck
+    x = tf.keras.layers.Conv1D(1024, (3), activation='relu', padding='same')(x)
                                                        param_grid['max_pool_stride'], 
                                                        param_grid['batch_size']):
     print(f"Training model: Blocks={num_blocks}, PoolStride={max_pool_stride}, Batch={batch_size}")
