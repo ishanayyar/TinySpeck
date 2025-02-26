@@ -9,8 +9,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-
-### seems like sklearn is now deprecated; use scikit-learn
 from sklearn.model_selection import train_test_split
 
 # okay so here we're importing modules required for U-Net model - which is 1D in this case
@@ -132,7 +130,6 @@ def decoder(entered_input, skip, filters=64):
 Sz1=8
 Sz2=8
 Sz3=8
-
 
 # first stage processes input to generate output (out0) --an intermediate output
 # second stage produces output1 - like a refined version
