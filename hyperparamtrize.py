@@ -66,7 +66,7 @@ print("y_train shape:", y_train.shape)  # Should be (batch_size, 512, 1)
 
 #ALL the hyperparameters 
 param_grid = {
-    'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks
+    'num_blocks': [2, 3, 4],  # Number of encoder-decoder blocks
     'max_pool_stride': [2, 3, 4],  # Max pooling strides
     'batch_size': [8, 32, 64, 128],  # Batch sizes
     'learning_rate': [1e-4, 1e-3, 1e-2]  # Learning rates
@@ -125,7 +125,6 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
                                                        param_grid['max_pool_stride'], 
                                                        param_grid['batch_size']):
     print(f"Training model: Blocks={num_blocks}, PoolStride={max_pool_stride}, Batch={batch_size}")
-    
     model = U_Net(input_shape=(X_train.shape[1],1),  # Downsampled input shape
                   num_blocks=num_blocks, 
                   max_pool_stride=max_pool_stride)
