@@ -21,21 +21,34 @@ y=np.load('sigi.npy')[:120000] # second target
 
 print('finito')
 
+
+### linear scaling --> just subsampling
+### add callback at the bottom
+### normalize the intensity of input spectra --> multiply by a number to bring maximum to same level
+### bring it down to 0-1 range.... int14?
+
+## downsample to 512 points then get max value then divide to get 0-1 range
+## model checkpoint callback
+
+## search plateau function so it stops epochs when it reaches a plateau
+## lower learning rate = learns more slowly but more accurately
+## reduce learning rate on plateau callback
+
 # need to ask Mohammad which one is best to use in terms of downsampling
 def downsample_subsampling(data, factor=2):
-    """Downsample by selecting every nth point (subsampling)."""
+## take every nth pt
     return data[:, ::factor]
 
 def downsample_averaging(data, window_size=2):
-    """Downsample by averaging adjacent points."""
+## avg adjacent pts
     kernel = np.ones((1, window_size)) / window_size
     smoothed = np.apply_along_axis(lambda m: np.convolve(m, kernel.ravel(), mode='valid'), axis=1, arr=data)
     return smoothed[:, ::window_size]  # Take every nth point after smoothing
 
-def downsample_pca(data, n_components=512):
-    """Downsample using PCA to extract principal components."""
+'''def downsample_pca(data, n_components=512):
+# downsample using PCA
     pca = PCA(n_components=n_components)
-    return pca.fit_transform(data)
+    return pca.fit_transform(data)'''
 
 # Load original data
 X = np.load('sigd.npy')[:120000]  
@@ -66,7 +79,7 @@ print("y_train shape:", y_train.shape)  # Should be (batch_size, 512, 1)
 
 #ALL the hyperparameters 
 param_grid = {
-    'num_blocks': [2, 3, 4],  # Number of encoder-decoder blocks
+    'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks
     'max_pool_stride': [2, 3, 4],  # Max pooling strides
     'batch_size': [8, 32, 64, 128],  # Batch sizes
     'learning_rate': [1e-4, 1e-3, 1e-2]  # Learning rates
@@ -134,9 +147,12 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
 
     history = model.fit(X_train, y_train, 
                         validation_data=(X_val, y_val), 
-                        epochs=50,  
+                        epochs=100,  
                         batch_size=batch_size)
 
     model_filename = f"unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
     model.save(model_filename)
     print(f"Model saved as {model_filename}")
+
+
+
