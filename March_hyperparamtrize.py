@@ -34,19 +34,19 @@ y=np.load('sigi.npy')[:120000] # second target
 
 # need to ask Mohammad which one is best to use in terms of downsampling
 def downsample_subsampling(data, factor=2):
-    """Downsample by selecting every nth point (subsampling)."""
+## take every nth pt
     return data[:, ::factor]
 
 def downsample_averaging(data, window_size=2):
-    """Downsample by averaging adjacent points."""
+## avg adjacent pts
     kernel = np.ones((1, window_size)) / window_size
     smoothed = np.apply_along_axis(lambda m: np.convolve(m, kernel.ravel(), mode='valid'), axis=1, arr=data)
     return smoothed[:, ::window_size]  # Take every nth point after smoothing
 
-def downsample_pca(data, n_components=512):
-    """Downsample using PCA to extract principal components."""
+'''def downsample_pca(data, n_components=512):
+# downsample using PCA
     pca = PCA(n_components=n_components)
-    return pca.fit_transform(data)
+    return pca.fit_transform(data)'''
 
 # Load original data
 X = np.load('sigd.npy')[:120000]  
