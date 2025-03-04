@@ -141,6 +141,33 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
                   max_pool_stride=max_pool_stride)
     
     optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)  
+    class TestCallback(tf.keras.callbacks.Callback):
+        def on_epoch_end(self, epoch, logs={}):
+            if epoch%1==0:
+                at=model.predict(X_val[:10])[-1]
+                fig, ax =plt.subplots(4,5,figsize=(12,10), sharex=True, sharey='row')
+                for j in range(5):
+                    ax[0,j].plot(X_val[j])
+                    ax[1,j].plot(y_val[j])
+                    ax[2,j].plot(at[j])
+                    ax[3,j].plot(at[j]-y_val[j])
+
+                for i in range(4):
+                    for j in range(5):
+                        ax[i,j].grid()
+                        
+                plt.tight_layout()
+                plt.show()
+
+    ### need a .keras file suffix in this following line
+    checkpoint_filepath = 'best.keras'
+
+    model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        monitor='val_loss',
+        mode='min',
+        save_best_only=True)
+
     model.compile(optimizer=optimizer, loss=tf.keras.losses.LogCosh(), metrics=['mae'])
 
     history = model.fit(X_train, y_train, 
@@ -148,7 +175,7 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
                         epochs=100,  
                         batch_size=batch_size)
 
-    model_filename = f"unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
+    model_filename = f"new_unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
     model.save(model_filename)
     print(f"Model saved as {model_filename}")
 
