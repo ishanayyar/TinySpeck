@@ -19,6 +19,20 @@ X=np.load('sigd.npy')[:120000]  # input signals from generated spectra
 y1=np.load('sigc.npy')[:120000] # first target
 y=np.load('sigi.npy')[:120000] # second target
 
+# Ensure correct original size
+original_size = X.shape[1]
+if original_size not in [1024, 2048]:
+    raise ValueError("Unexpected input size. Expected 1024 or 2048.")
+
+
+# Normalize data to [0, 1] range
+X = X / np.max(X, axis=1, keepdims=True)
+y = y / np.max(y, axis=1, keepdims=True)
+
+# Downsample data
+def downsample_subsampling(data, factor=2):
+    return data[:, ::factor]
+
 
 ### linear scaling --> just subsampling
 ### add callback at the bottom
@@ -31,7 +45,7 @@ y=np.load('sigi.npy')[:120000] # second target
 ## search plateau function so it stops epochs when it reaches a plateau
 ## lower learning rate = learns more slowly but more accurately
 ## reduce learning rate on plateau callback
-
+'''
 # need to ask Mohammad which one is best to use in terms of downsampling
 def downsample_subsampling(data, factor=2):
 ## take every nth pt
@@ -42,21 +56,12 @@ def downsample_averaging(data, window_size=2):
     kernel = np.ones((1, window_size)) / window_size
     smoothed = np.apply_along_axis(lambda m: np.convolve(m, kernel.ravel(), mode='valid'), axis=1, arr=data)
     return smoothed[:, ::window_size]  # Take every nth point after smoothing
-
+'''
 '''def downsample_pca(data, n_components=512):
 # downsample using PCA
     pca = PCA(n_components=n_components)
     return pca.fit_transform(data)'''
 
-# Load original data
-X = np.load('sigd.npy')[:120000]  
-y1 = np.load('sigc.npy')[:120000]  
-y = np.load('sigi.npy')[:120000]  
-
-# Ensure correct original size
-original_size = X.shape[1]
-if original_size not in [1024, 2048]:
-    raise ValueError("Unexpected input size. Expected 1024 or 2048.")
 
 target_size = 512  
 
@@ -75,11 +80,16 @@ X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_st
 print("X_train shape:", X_train.shape)  # Should be (batch_size, 512, 1)
 print("y_train shape:", y_train.shape)  # Should be (batch_size, 512, 1)
 
+# need to reshape becuase sometimes it breaks at ~epoch 64?
+X_train = X_train.reshape(X_train.shape[0], 512, 1)
+y_train = y_train.reshape(y_train.shape[0], 512, 1)
+
 #ALL the hyperparameters 
 param_grid = {
     'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks
     'max_pool_stride': [2, 3, 4],  # Max pooling strides
-    'batch_size': [8, 32, 64, 128],  # Batch sizes
+    'batch_size': [32, 64, 128],  # Batch sizes
+    # failing at lower batch sizes
     'learning_rate': [1e-4, 1e-3, 1e-2]  # Learning rates
 }
 
@@ -172,7 +182,7 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
 
     history = model.fit(X_train, y_train, 
                         validation_data=(X_val, y_val), 
-                        epochs=100,  
+                        epochs=20,  
                         batch_size=batch_size)
 
     model_filename = f"new_unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
