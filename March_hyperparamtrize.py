@@ -15,6 +15,7 @@ from tensorflow.keras.layers import BatchNormalization, Conv1DTranspose, Concate
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
+
 X=np.load('sigd.npy')[:120000]  # input signals from generated spectra
 y1=np.load('sigc.npy')[:120000] # first target
 y=np.load('sigi.npy')[:120000] # second target
@@ -24,10 +25,11 @@ original_size = X.shape[1]
 if original_size not in [1024, 2048]:
     raise ValueError("Unexpected input size. Expected 1024 or 2048.")
 
-
 # Normalize data to [0, 1] range
-X = X / np.max(X, axis=1, keepdims=True)
-y = y / np.max(y, axis=1, keepdims=True)
+X = X / (np.max(X, axis=1, keepdims=True) + 1e-8)  #### needed to add a small epsilon becuase I'm getting NaNs
+y = y / (np.max(y, axis=1, keepdims=True) + 1e-8)
+y1 = y1 / (np.max(y1, axis=1, keepdims=True) + 1e-8)  # Normalize y1 too!
+
 
 # Downsample data
 def downsample_subsampling(data, factor=2):
@@ -70,19 +72,22 @@ X = downsample_subsampling(X, factor=original_size // target_size)
 y1 = downsample_subsampling(y1, factor=original_size // target_size)
 y = downsample_subsampling(y, factor=original_size // target_size)
 
-# Reshape for Conv1D (batch, time_steps, channels)
 X = X.reshape(X.shape[0], X.shape[1], 1)
+y1 = y1.reshape(y1.shape[0], y1.shape[1], 1)
 y = y.reshape(y.shape[0], y.shape[1], 1)
 
+
 # Train-test split
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=7)
+X_train, X_val, y1_train, y1_val, y_train, y_val = train_test_split(X, y1, y, test_size=0.2, random_state=7)
 
 print("X_train shape:", X_train.shape)  # Should be (batch_size, 512, 1)
 print("y_train shape:", y_train.shape)  # Should be (batch_size, 512, 1)
-
+'''
 # need to reshape becuase sometimes it breaks at ~epoch 64?
 X_train = X_train.reshape(X_train.shape[0], 512, 1)
 y_train = y_train.reshape(y_train.shape[0], 512, 1)
+'''
+
 
 #ALL the hyperparameters 
 param_grid = {
@@ -179,11 +184,22 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
         save_best_only=True)
 
     model.compile(optimizer=optimizer, loss=tf.keras.losses.LogCosh(), metrics=['mae'])
+    
+    ### add early stopping
+    early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
-    history = model.fit(X_train, y_train, 
-                        validation_data=(X_val, y_val), 
-                        epochs=20,  
-                        batch_size=batch_size)
+    
+    ### add LR callback
+  
+    reduce_lr_callback = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6)
+
+    history = model.fit(
+            X_train, y_train, 
+            validation_data=(X_val, y_val), 
+            epochs=20,  
+            batch_size=batch_size,
+            callbacks=[model_checkpoint_callback, early_stopping_callback, reduce_lr_callback]
+    )
 
     model_filename = f"new_unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
     model.save(model_filename)
