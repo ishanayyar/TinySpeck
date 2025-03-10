@@ -28,8 +28,10 @@ if original_size not in [1024, 2048]:
 # Normalize data to [0, 1] range
 X = X / (np.max(X, axis=1, keepdims=True) + 1e-8)  #### needed to add a small epsilon becuase I'm getting NaNs
 y = y / (np.max(y, axis=1, keepdims=True) + 1e-8)
-y1 = y1 / (np.max(y1, axis=1, keepdims=True) + 1e-8)  # Normalize y1 too!
+### y1 = y1 / (np.max(y1, axis=1, keepdims=True) + 1e-8)  # Normalize y1 too!
 
+X= 100(X)
+y = 100(y)
 
 # Downsample data
 def downsample_subsampling(data, factor=2):
@@ -77,8 +79,12 @@ y1 = y1.reshape(y1.shape[0], y1.shape[1], 1)
 y = y.reshape(y.shape[0], y.shape[1], 1)
 
 
+
+## just use y_train ---> not y1 ---> it doesn't need the noise
 # Train-test split
 X_train, X_val, y1_train, y1_val, y_train, y_val = train_test_split(X, y1, y, test_size=0.2, random_state=7)
+
+
 
 print("X_train shape:", X_train.shape)  # Should be (batch_size, 512, 1)
 print("y_train shape:", y_train.shape)  # Should be (batch_size, 512, 1)
@@ -228,4 +234,8 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
     plt.show()
 
 
+### plot at end of each epoch --> need a callback at end of epoch
 
+## train model that doesn't produce noise --> just cleans
+## install tensorflow --> metal 
+## normalise and x 100
