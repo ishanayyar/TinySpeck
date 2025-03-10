@@ -205,5 +205,27 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
     model.save(model_filename)
     print(f"Model saved as {model_filename}")
 
+    best_model = tf.keras.models.load_model('best.keras')
+    
+    # Predict using best model
+    predictions = best_model.predict(X_val[:10])  
+
+    # Plot results
+    fig, ax = plt.subplots(4, 5, figsize=(12, 10), sharex=True, sharey='row')
+
+    for j in range(5):
+        ax[0, j].plot(X_val[j], label="Input Spectrum")
+        ax[1, j].plot(y_val[j], label="True Spectrum")
+        ax[2, j].plot(predictions[j], label="Predicted Spectrum")
+        ax[3, j].plot(predictions[j] - y_val[j], label="Residuals")  # Error difference
+
+    for i in range(4):
+        for j in range(5):
+            ax[i, j].grid()
+            ax[i, j].legend()
+
+    plt.tight_layout()
+    plt.show()
+
 
 
