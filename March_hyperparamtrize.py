@@ -30,8 +30,8 @@ X = X / (np.max(X, axis=1, keepdims=True) + 1e-8)  #### needed to add a small ep
 y = y / (np.max(y, axis=1, keepdims=True) + 1e-8)
 ### y1 = y1 / (np.max(y1, axis=1, keepdims=True) + 1e-8)  # Normalize y1 too!
 
-X= 100(X)
-y = 100(y)
+X= 100 * X
+y = 100 * y
 
 # Downsample data
 def downsample_subsampling(data, factor=2):
@@ -71,18 +71,18 @@ target_size = 512
 
 # Downsample correctly
 X = downsample_subsampling(X, factor=original_size // target_size)
-y1 = downsample_subsampling(y1, factor=original_size // target_size)
+#y1 = downsample_subsampling(y1, factor=original_size // target_size)
 y = downsample_subsampling(y, factor=original_size // target_size)
 
 X = X.reshape(X.shape[0], X.shape[1], 1)
-y1 = y1.reshape(y1.shape[0], y1.shape[1], 1)
+#y1 = y1.reshape(y1.shape[0], y1.shape[1], 1)
 y = y.reshape(y.shape[0], y.shape[1], 1)
 
 
 
 ## just use y_train ---> not y1 ---> it doesn't need the noise
 # Train-test split
-X_train, X_val, y1_train, y1_val, y_train, y_val = train_test_split(X, y1, y, test_size=0.2, random_state=7)
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=7)
 
 
 
@@ -164,21 +164,40 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
     optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)  
     class TestCallback(tf.keras.callbacks.Callback):
         def on_epoch_end(self, epoch, logs={}):
-            if epoch%1==0:
-                at=model.predict(X_val[:10])[-1]
-                fig, ax =plt.subplots(4,5,figsize=(12,10), sharex=True, sharey='row')
-                for j in range(5):
-                    ax[0,j].plot(X_val[j])
-                    ax[1,j].plot(y_val[j])
-                    ax[2,j].plot(at[j])
-                    ax[3,j].plot(at[j]-y_val[j])
+        # Plot every epoch
+            if epoch % 1 == 0:
+                # Predict output for the validation set
+                predictions = self.model.predict(X_val[:10])
+                
+                # Create a new figure for the plots
+                fig, ax = plt.subplots(4, 5, figsize=(12, 10), sharex=True, sharey='row')
 
+                for j in range(5):
+                    # Plot the input spectrum
+                    ax[0, j].plot(X_val[j], label="Input Spectrum")
+                    ax[0, j].set_title(f"Epoch {epoch + 1}")
+
+                    # Plot the true spectrum (y_val)
+                    ax[1, j].plot(y_val[j], label="True Spectrum")
+
+                    # Plot the predicted spectrum
+                    ax[2, j].plot(predictions[j], label="Predicted Spectrum")
+
+                    # Plot the residuals (error between prediction and true)
+                    ax[3, j].plot(predictions[j] - y_val[j], label="Residuals")
+
+                # Add grid and legend for each subplot
                 for i in range(4):
                     for j in range(5):
-                        ax[i,j].grid()
-                        
+                        ax[i, j].grid()
+                        ax[i, j].legend()
+
+                # Adjust layout and show the plot
                 plt.tight_layout()
-                plt.show()
+
+                # Save the plot as an image file
+                plt.savefig(f"epoch_{epoch + 1}_plots.png")
+                plt.close()  # Close the fig --> save memory
 
     ### need a .keras file suffix in this following line
     checkpoint_filepath = 'best.keras'
@@ -196,42 +215,24 @@ for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'],
 
     
     ### add LR callback
-  
     reduce_lr_callback = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6)
 
     history = model.fit(
             X_train, y_train, 
             validation_data=(X_val, y_val), 
-            epochs=20,  
+            epochs=5,  
             batch_size=batch_size,
-            callbacks=[model_checkpoint_callback, early_stopping_callback, reduce_lr_callback]
+            callbacks=[
+                    model_checkpoint_callback, 
+                    early_stopping_callback, 
+                    reduce_lr_callback, 
+                    TestCallback()
+                    ]
     )
 
     model_filename = f"new_unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
     model.save(model_filename)
     print(f"Model saved as {model_filename}")
-
-    best_model = tf.keras.models.load_model('best.keras')
-    
-    # Predict using best model
-    predictions = best_model.predict(X_val[:10])  
-
-    # Plot results
-    fig, ax = plt.subplots(4, 5, figsize=(12, 10), sharex=True, sharey='row')
-
-    for j in range(5):
-        ax[0, j].plot(X_val[j], label="Input Spectrum")
-        ax[1, j].plot(y_val[j], label="True Spectrum")
-        ax[2, j].plot(predictions[j], label="Predicted Spectrum")
-        ax[3, j].plot(predictions[j] - y_val[j], label="Residuals")  # Error difference
-
-    for i in range(4):
-        for j in range(5):
-            ax[i, j].grid()
-            ax[i, j].legend()
-
-    plt.tight_layout()
-    plt.show()
 
 
 ### plot at end of each epoch --> need a callback at end of epoch
