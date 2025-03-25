@@ -29,7 +29,7 @@ if original_size not in [1024, 2048]:
 X = X / (np.max(X, axis=1, keepdims=True) + 1e-8)  #### needed to add a small epsilon becuase I'm getting NaNs
 y = y / (np.max(y, axis=1, keepdims=True) + 1e-8)
 ### y1 = y1 / (np.max(y1, axis=1, keepdims=True) + 1e-8)  # Normalize y1 too!
-
+print(X, y)
 X= 100 * X
 y = 100 * y
 
