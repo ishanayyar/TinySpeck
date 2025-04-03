@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from itertools import product
 from sklearn.model_selection import train_test_split
-import pandas as pd
+
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
@@ -15,7 +15,16 @@ from tensorflow.keras.layers import BatchNormalization, Conv1DTranspose, Concate
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
+from tensorflow.keras.callbacks import TensorBoard
+import datetime
 
+# set  GPU as the device
+if tf.config.list_physical_devices('GPU'):
+#    tf.config.set_visible_devices([], 'CPU')  # THIS ISN"TY WORKING!!!! Disable any CPU devices
+    print("TensorFlow Metal is active!")
+else:
+    print("GPU not detected, TensorFlow Metal is not active.")
+    
 X=np.load('sigd.npy')[:120000]  # input signals from generated spectra
 y1=np.load('sigc.npy')[:120000] # first target
 y=np.load('sigi.npy')[:120000] # second target
@@ -23,11 +32,14 @@ y=np.load('sigi.npy')[:120000] # second target
 # Ensure correct original size
 original_size = X.shape[1]
 if original_size not in [1024, 2048]:
-    raise ValueError("Unexpected input size. Expected 1024 or 2048.")
+    raise ValueError("Not expected input size. I expected 1024 or 2048.")
 
-# Normalize data to [0, 1] range
-X = X / (np.max(X, axis=1, keepdims=True) + 1e-8)  #### needed to add a small epsilon becuase I'm getting NaNs
-y = y / (np.max(y, axis=1, keepdims=True) + 1e-8)
+
+# norm data to [0, 1] range - adding epsilon to avoid div by zero
+epsilon = 1e-8
+X = X / (np.max(X, axis=1, keepdims=True) + epsilon)
+y = y / (np.max(y, axis=1, keepdims=True) + epsilon)
+
 ### y1 = y1 / (np.max(y1, axis=1, keepdims=True) + 1e-8)  # Normalize y1 too!
 print(X, y)
 X= 100 * X
@@ -73,9 +85,7 @@ target_size = 512
 X = downsample_subsampling(X, factor=original_size // target_size)
 #y1 = downsample_subsampling(y1, factor=original_size // target_size)
 y = downsample_subsampling(y, factor=original_size // target_size)
-
 X = X.reshape(X.shape[0], X.shape[1], 1)
-#y1 = y1.reshape(y1.shape[0], y1.shape[1], 1)
 y = y.reshape(y.shape[0], y.shape[1], 1)
 
 
@@ -98,7 +108,7 @@ y_train = y_train.reshape(y_train.shape[0], 512, 1)
 #ALL the hyperparameters 
 param_grid = {
     'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks
-    'max_pool_stride': [2, 3, 4],  # Max pooling strides
+    'max_pool_stride': [ 4],  # Max pooling strides   # 2 done and 3 was having issues with indivisibility errors, so removing
     'batch_size': [32, 64, 128],  # Batch sizes
     # failing at lower batch sizes
     'learning_rate': [1e-4, 1e-3, 1e-2]  # Learning rates
@@ -111,7 +121,6 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
     x = inputs
     skips = []
     for i in range(num_blocks):
-
         # Use batch normalization here AND THEN activation --> else output becomes less than 0
         # Dead neurons
         x = tf.keras.layers.Conv1D(64 * (2 ** i), 3, padding='same')(x)
@@ -153,87 +162,105 @@ def U_Net(input_shape, num_blocks, max_pool_stride):
     model = tf.keras.models.Model(inputs, outputs)
     return model
 
-for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'], 
-                                                       param_grid['max_pool_stride'], 
-                                                       param_grid['batch_size']):
-    print(f"Training model: Blocks={num_blocks}, PoolStride={max_pool_stride}, Batch={batch_size}")
-    model = U_Net(input_shape=(X_train.shape[1],1),  # Downsampled input shape
-                  num_blocks=num_blocks, 
-                  max_pool_stride=max_pool_stride)
-    
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)  
-    class TestCallback(tf.keras.callbacks.Callback):
-        def on_epoch_end(self, epoch, logs={}):
-        # Plot every epoch
-            if epoch % 1 == 0:
-                # Predict output for the validation set
-                predictions = self.model.predict(X_val[:10])
-                
-                # Create a new figure for the plots
-                fig, ax = plt.subplots(4, 5, figsize=(12, 10), sharex=True, sharey='row')
 
+# my custom callback for plotting predictions and residuals
+class TestCallback(tf.keras.callbacks.Callback):
+    def __init__(self, X_val, y_val, run_name):
+        super().__init__()
+        self.X_val = X_val
+        self.y_val = y_val
+        self.run_name = run_name  # need a unique identifier for each hyperparameter set
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch % 1 == 0:
+            at = self.model.predict(self.X_val[:10])[-1]
+            fig, ax = plt.subplots(4, 5, figsize=(12, 10), sharex=True, sharey='row')
+
+            for j in range(5):
+                ax[0, j].plot(self.X_val[j])
+                ax[1, j].plot(self.y_val[j])
+                ax[2, j].plot(at[j])
+                ax[3, j].plot(at[j] - self.y_val[j])
+
+            for i in range(4):
                 for j in range(5):
-                    # Plot the input spectrum
-                    ax[0, j].plot(X_val[j], label="Input Spectrum")
-                    ax[0, j].set_title(f"Epoch {epoch + 1}")
+                    ax[i, j].grid()
 
-                    # Plot the true spectrum (y_val)
-                    ax[1, j].plot(y_val[j], label="True Spectrum")
+            plt.tight_layout()
+            save_path = f"plots/{self.run_name}_epoch{epoch}.png"
+            os.makedirs("plots", exist_ok=True)  # ensure directory exists
+            plt.savefig(save_path)
+            plt.close()
 
-                    # Plot the predicted spectrum
-                    ax[2, j].plot(predictions[j], label="Predicted Spectrum")
 
-                    # Plot the residuals (error between prediction and true)
-                    ax[3, j].plot(predictions[j] - y_val[j], label="Residuals")
 
-                # Add grid and legend for each subplot
-                for i in range(4):
-                    for j in range(5):
-                        ax[i, j].grid()
-                        ax[i, j].legend()
-
-                # Adjust layout and show the plot
-                plt.tight_layout()
-
-                # Save the plot as an image file
-                plt.savefig(f"epoch_{epoch + 1}_plots.png")
-                plt.close()  # Close the fig --> save memory
-
-    ### need a .keras file suffix in this following line
+# Training loop with hyperparameter tuning
+for num_blocks, max_pool_stride, batch_size in product(param_grid['num_blocks'], 
+                                                   param_grid['max_pool_stride'], 
+                                                   param_grid['batch_size']):
+    print(f"Training model: Blocks={num_blocks}, PoolStride={max_pool_stride}, Batch={batch_size}")
+    
+    # Create model instance
+    model = U_Net(input_shape=(X_train.shape[1], 1),
+                 num_blocks=num_blocks,
+                 max_pool_stride=max_pool_stride)
+    
+    # Define optimizer and callbacks
+    optimizer = Adam(learning_rate=1e-4)
+    
+    # Model checkpoint callback
     checkpoint_filepath = 'best.keras'
-
     model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
         monitor='val_loss',
         mode='min',
-        save_best_only=True)
+        save_best_only=True
+    )
+    # Create a timestamped log directory
+    log_dir = (
+        f"logs/unet_experiments/" 
+        f"blocks_{num_blocks}_"
+        f"stride_{max_pool_stride}_"
+        f"bs_{batch_size}_"
+        f"{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    )
 
-    model.compile(optimizer=optimizer, loss=tf.keras.losses.LogCosh(), metrics=['mae'])
-    
-    ### add early stopping
+    tensorboard_callback = TensorBoard(
+        log_dir=log_dir,
+        histogram_freq=1,  # Log weight histograms every epoch
+        write_graph=True,
+        write_images=True,
+        profile_batch=(500, 520),
+        update_freq='epoch',# Profile batches 100-110
+    )
     early_stopping_callback = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
-    
-    ### add LR callback
     reduce_lr_callback = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6)
+    
+    # Create TestCallback with required arguments
+    run_name = f"blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}"
+    test_callback = TestCallback(X_val, y_val, run_name)
+    
+    # Compile the model
+    model.compile(optimizer=optimizer, loss=tf.keras.losses.LogCosh(), metrics=['mae'])
 
+    # Train the model
     history = model.fit(
-            X_train, y_train, 
-            validation_data=(X_val, y_val), 
-            epochs=5,  
-            batch_size=batch_size,
-            callbacks=[
-                    model_checkpoint_callback, 
-                    early_stopping_callback, 
-                    reduce_lr_callback, 
-                    TestCallback()
-                    ]
+        X_train, y_train, 
+        validation_data=(X_val, y_val), 
+        epochs=100,
+        batch_size=batch_size,
+        callbacks=[
+            model_checkpoint_callback, 
+            early_stopping_callback, 
+            reduce_lr_callback, 
+            test_callback,
+            tensorboard_callback
+        ]
     )
 
     model_filename = f"new_unet_blocks{num_blocks}_pool{max_pool_stride}_batch{batch_size}.keras"
     model.save(model_filename)
     print(f"Model saved as {model_filename}")
-
 
 ### plot at end of each epoch --> need a callback at end of epoch
 
