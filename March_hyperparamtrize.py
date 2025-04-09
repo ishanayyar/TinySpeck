@@ -89,8 +89,6 @@ y = downsample_subsampling(y, factor=original_size // target_size)
 X = X.reshape(X.shape[0], X.shape[1], 1)
 y = y.reshape(y.shape[0], y.shape[1], 1)
 
-
-
 ## just use y_train ---> not y1 ---> it doesn't need the noise
 # Train-test split
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=7)
