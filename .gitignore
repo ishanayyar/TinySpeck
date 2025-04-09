@@ -5,3 +5,4 @@ sigi.npy
 sigc_512.py
 sigi_512.py
 sigd_can 512.py
+*.keras

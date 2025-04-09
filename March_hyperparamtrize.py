@@ -107,8 +107,8 @@ y_train = y_train.reshape(y_train.shape[0], 512, 1)
 
 #ALL the hyperparameters 
 param_grid = {
-    'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks
-    'max_pool_stride': [ 4],  # Max pooling strides   # 2 done and 3 was having issues with indivisibility errors, so removing
+    'num_blocks': [1, 2, 3, 4],  # Number of encoder-decoder blocks #### 1 done!!!
+    'max_pool_stride': [ 2],  # Max pooling strides   # 2 done; 3 and 4 were having issues with indivisibility errors, so only having strid length of 2
     'batch_size': [32, 64, 128],  # Batch sizes
     # failing at lower batch sizes
     'learning_rate': [1e-4, 1e-3, 1e-2]  # Learning rates
