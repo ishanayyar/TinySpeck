@@ -172,7 +172,7 @@ class TestCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % 1 == 0:
-            at = self.model.predict(self.X_val[:10])[-1]
+            at = self.model.predict(self.X_val[:10])
             fig, ax = plt.subplots(4, 5, figsize=(12, 10), sharex=True, sharey='row')
 
             for j in range(5):
